@@ -65,4 +65,5 @@ dependencies:
       - threadpoolctl==3.6.0
       - typing-extensions==4.15.0
       - urllib3==2.5.0
+      - nnAudio
 prefix: C:\Users\noaha\anaconda3\envs\4347_project
