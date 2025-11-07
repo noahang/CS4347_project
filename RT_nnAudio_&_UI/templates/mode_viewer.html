@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time Mode Estimation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background-color: #fbfcfd;
+            padding: 120px 120px;
+            border-radius: 20px;
+            box-shadow: 0 40px 120px rgba(234, 4, 4, 0.1);
+        }
+        h1 {
+            color: #888;
+            font-weight: 400;
+            font-size: 1.5em;
+        }
+        #mode-value {
+            font-size: 4.5em;
+            font-weight: 100;
+            color: #007aff;
+            margin-top: -10px;
+            min-height: 1.2em;
+            width: 700px;
+            height: 100px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ESTIMATED MODE:</h1>
+        <div id="mode-value">Waiting for the mode...</div>
+    </div>
+
+    <script type="text/javascript">
+        var socket = io();
+
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        //Listen for 'update_mode' events from the server and update the page
+        socket.on('update_mode', function(msg) {
+            console.log('Received mode:', msg.data);
+            
+            document.getElementById('mode-value').innerHTML = msg.data;
+        });
+    </script>
+
+</body>
+</html>
