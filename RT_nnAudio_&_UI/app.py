@@ -14,6 +14,8 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import secrets
 
+from Model.src.train import Classifier
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -53,13 +55,13 @@ FINAL_OUTPUT_INTERVAL_SECONDS = 2.0
 RESULTS_PER_FINAL_OUTPUT = int(FINAL_OUTPUT_INTERVAL_SECONDS / PROCESSING_HOP_SECONDS)
 
 
-def classify_mode(feature_data):
+def classify_mode(feature_data: np.ndarray):
     """
     Placeholder function for neural network classification.
     """
-    MODES = ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"]
-    print("Classifier Received features for classification...")
-    return random.choice(MODES)
+    classifier = Classifier(model_path="./Model/src/results/best_model.pth")
+    mode = classifier.classify(feature_data)
+    return mode
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
