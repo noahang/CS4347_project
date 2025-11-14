@@ -92,6 +92,8 @@ def classify_mode_2_heads(feature_data: torch.tensor):
         pred_center = torch.argmax(probs_center, dim=1).item()
         pred_mode = torch.argmax(probs_mode, dim=1).item()
 
+        print(probs_center)
+
     return NUM_TO_TONAL_CENTER_MAP[pred_center]+ " " + NUM_TO_MUSICAL_MODE_MAP[pred_mode]
 
 #Thread 1: Audio Callback (High-Priority):
@@ -180,8 +182,7 @@ def audio_processing_task():
     processor = threading.Thread(target=processing_thread_task)
     processor.daemon = True
 
-    global lstm_state
-    lstm_state = None 
+    
     # Start the processing-thread that consumes audio and runs the neural network
     processor.start()
 
