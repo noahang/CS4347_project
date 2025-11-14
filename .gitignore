@@ -2,5 +2,3 @@
 *.npy
 *.txt
 
-Model/data/*
-.idea/*
