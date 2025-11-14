@@ -14,7 +14,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import secrets
 
-from Model.src.train import Classifier
+"""from Model.src.train import Classifier"""
 
 
 app = Flask(__name__)
@@ -47,7 +47,7 @@ CQT_BINS_PER_OCTAVE = 12
 CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 
 #Sliding Window Parameters:
-PROCESSING_HOP_SECONDS = 0.5
+PROCESSING_HOP_SECONDS = 1
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
 #Interval between each output of mode-estimate
@@ -59,9 +59,9 @@ def classify_mode(feature_data: np.ndarray):
     """
     Placeholder function for neural network classification.
     """
-    classifier = Classifier(model_path="./Model/src/results/best_model.pth")
-    mode = classifier.classify(feature_data)
-    return mode
+    """classifier = Classifier(model_path="./Model/src/results/best_model.pth")
+    mode = classifier.classify(feature_data)"""
+    return "Dorian"
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
@@ -113,17 +113,6 @@ def processing_thread_task():
 
                 audio_chunk = audio_buffer[:PROCESSING_INTERVAL_SAMPLES]
                 
-                """time_start = time.perf_counter()
-                # Previous librosa CQT computation:
-                cqt_features = librosa.cqt(
-                    y=audio_chunk,
-                    sr=SAMPLE_RATE,
-                    hop_length=HOP_SAMPLES,
-                    bins_per_octave= CQT_BINS_PER_OCTAVE,
-                    n_bins= CQT_N_BINS, 
-                )
-                time_end = time.perf_counter()
-                print(f"Librosa CQT computed in {time_end - time_start:.4f} seconds.")"""
 
                 # nnAudio CQT computation:
                 chunk_tensor = torch.tensor(audio_chunk, dtype=torch.float32).unsqueeze(0)
@@ -133,32 +122,9 @@ def processing_thread_task():
 
 
                 estimated_mode = classify_mode(magnitude_features_tensor)
-                print(f"   > Intermediate mode: {estimated_mode}")
+                print(f"Mode-estimate: {estimated_mode}")
                 socketio.emit('update_mode', {'data': estimated_mode})
                 audio_buffer = audio_buffer[PROCESSING_HOP_SAMPLES:]
-
-
-            """    
-            #Old solution with aggregation over multiple estimates:  
-            mode_results_list.append(estimated_mode)
-            print(f"   > Intermediate mode: {estimated_mode}")  
-
-            #Aggregation loop:
-            if len(mode_results_list) >= RESULTS_PER_FINAL_OUTPUT:
-                
-                try:
-                    final_mode = statistics.mode(mode_results_list)
-                    print("\n" + "-"*30)
-                    print(f"   FINAL MODE (last {FINAL_OUTPUT_INTERVAL_SECONDS}s): {final_mode}")
-                    print("-"*30 + "\n")
-
-                    socketio.emit('update_mode', {'data': final_mode})
-                    
-                except statistics.StatisticsError:
-                    print(f"No unique mode found, defaulting to '{mode_results_list[0]}'")
-
-                mode_results_list.clear()
-            """
 
         except queue.Empty:
             continue
@@ -175,14 +141,7 @@ def audio_processing_task():
    #Warm-up analysis functions:
     print("Main: Warming up analysis functions...")
     try:
-        dummy_audio = np.zeros(N_FFT * 4, dtype=np.float32) 
-        _ =  librosa.cqt(
-                y=dummy_audio,
-                sr=SAMPLE_RATE,
-                hop_length=HOP_SAMPLES,
-                bins_per_octave= CQT_BINS_PER_OCTAVE,
-                n_bins= CQT_N_BINS, 
-            )
+        """Warm up-function for neural network?"""
         print("Main: Warm-up complete.")
     except Exception as e:
         print(f"Error during warm-up: {e}")

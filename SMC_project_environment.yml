@@ -1,0 +1,27 @@
+name: SMC_project
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scipy
+  - scikit-learn
+  - flask
+  - flask-socketio
+  - pytorch
+  - torchvision
+
+  - pip:
+      - librosa==0.11.0
+      - llvmlite==0.45.1
+      - numba==0.62.1
+      - audioread==3.1.0
+      - cython==3.1.4
+      - soxr==1.0.0
+      - sounddevice==0.5.3
+      - soundfile==0.13.1
+      - nnAudio>=0.3
+
