@@ -7,6 +7,9 @@ import time
 import statistics
 import random
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import torch
 from nnAudio.Spectrogram import CQT
 
@@ -14,7 +17,16 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import secrets
 
-"""from Model.src.train import Classifier"""
+from Model.src.train import Classifier
+from Model.src.hparams import Hparams
+from Model.src.config.mode_map import NUM_TO_MODE_MAP
+
+device = "cpu" 
+classifier = Classifier(
+    device=device, 
+    model_path="./Model/src/results/best_model.pth"
+)
+classifier.model.eval()
 
 
 app = Flask(__name__)
@@ -47,7 +59,7 @@ CQT_BINS_PER_OCTAVE = 12
 CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 
 #Sliding Window Parameters:
-PROCESSING_HOP_SECONDS = 1
+PROCESSING_HOP_SECONDS = 0.5
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
 #Interval between each output of mode-estimate
@@ -55,13 +67,26 @@ FINAL_OUTPUT_INTERVAL_SECONDS = 2.0
 RESULTS_PER_FINAL_OUTPUT = int(FINAL_OUTPUT_INTERVAL_SECONDS / PROCESSING_HOP_SECONDS)
 
 
+
 def classify_mode(feature_data: np.ndarray):
+    x = torch.tensor(feature_data, dtype=torch.float32).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        out = classifier.model(x)
+        probs = torch.softmax(out, dim=1)
+        pred = torch.argmax(probs, dim=1).item()
+
+    return pred
+
+
+def classify_mode_old(feature_data: np.ndarray):
     """
     Placeholder function for neural network classification.
     """
     """classifier = Classifier(model_path="./Model/src/results/best_model.pth")
     mode = classifier.classify(feature_data)"""
-    return "Dorian"
+    dummy = "Dorian"
+    return dummy
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
@@ -118,7 +143,7 @@ def processing_thread_task():
                 chunk_tensor = torch.tensor(audio_chunk, dtype=torch.float32).unsqueeze(0)
                 cqt_features_tensor = cqt_layer(chunk_tensor)
                 magnitude_features_tensor = torch.abs(cqt_features_tensor).squeeze(0).numpy()
-
+            
 
 
                 estimated_mode = classify_mode(magnitude_features_tensor)

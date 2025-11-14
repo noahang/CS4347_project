@@ -13,6 +13,10 @@ dependencies:
   - flask-socketio
   - pytorch
   - torchvision
+  - tqdm
+  - matplotlib
+  - seaborn
+
 
   - pip:
       - librosa==0.11.0

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from config.mode_map import MODE_TO_NUM_MAP
+from Model.src.config.mode_map import MODE_TO_NUM_MAP
 
 
 class MyDataset(Dataset):
