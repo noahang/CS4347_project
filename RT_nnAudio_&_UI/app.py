@@ -62,6 +62,7 @@ CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 PROCESSING_HOP_SECONDS = 1
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
+lstm_state = None
 
 def classify_mode_1_head(feature_data: torch.tensor):
     # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
@@ -77,13 +78,15 @@ def classify_mode_1_head(feature_data: torch.tensor):
     return 
 
 def classify_mode_2_heads(feature_data: torch.tensor):
+    global lstm_state
     # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
     #Our model expects a batch, but we are processing one chunk at a time.
     x = feature_data.unsqueeze(0).to(device)
 
     #Calculate with no_grad for faster computation
     with torch.no_grad():
-        center, mode = classifier.model(x)
+        #center, mode = classifier.model(x)
+        (center, mode), lstm_state = classifier.model(x, lstm_state)
         probs_center = torch.softmax(center, dim=1)
         probs_mode = torch.softmax(mode, dim=1)
         pred_center = torch.argmax(probs_center, dim=1).item()
@@ -176,6 +179,9 @@ def audio_processing_task():
     print("Main: Starting the processing thread...")
     processor = threading.Thread(target=processing_thread_task)
     processor.daemon = True
+
+    global lstm_state
+    lstm_state = None 
     # Start the processing-thread that consumes audio and runs the neural network
     processor.start()
 

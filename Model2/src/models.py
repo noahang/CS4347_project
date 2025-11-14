@@ -57,7 +57,7 @@ class CnnLstm(nn.Module):
         self.tonal_center_head = nn.Linear(args['fc_chs'], args['tonal_center_out_chs'])
         self.musical_mode_head = nn.Linear(args['fc_chs'], args['mode_out_chs'])
 
-    def forward(self, x):
+    def forward(self, x, h0=None):
         x = x.unsqueeze(1)
         # print(x.shape)
 
@@ -70,7 +70,7 @@ class CnnLstm(nn.Module):
         c3 = c3.flatten(2)
         # print(0.2)
 
-        lstm1, _ = self.lstm(c3)
+        lstm1, hidden = self.lstm(c3, h0)
         # print(0.3)
 
         f1 = self.fc(lstm1[:, -1, :])
@@ -78,4 +78,4 @@ class CnnLstm(nn.Module):
         out_musical_mode = self.musical_mode_head(f1)
         # print(0.4)
 
-        return (out_tonal_center, out_musical_mode)
+        return (out_tonal_center, out_musical_mode), hidden

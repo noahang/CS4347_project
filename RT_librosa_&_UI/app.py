@@ -66,8 +66,6 @@ classifier = Classifier(
 )
 classifier.model.eval()
 
-
-
 def classify_mode_old(feature_data):
     """
     Placeholder function for neural network classification.
