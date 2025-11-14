@@ -1,13 +1,39 @@
-## 🚀 Setup
+## Setup
+To correctly run the real-time implementation of the code, 
+Navigate to the CS4347_project folder in the terminal, then to 
+create the right environment run:
 
 ```bash
-conda env create -f 4347_project_environment.yml
-conda activate 4347_project_environment
+conda env create -f SMC_project_environment.yml
+conda activate SMC_project_environment
 ```
+then, still from the CS4347_project folder run:
 
-## 🧩 Requirements
-- Python 3.9
+```bash
+python "RT_nnAudio_&_UI\app.py"
+```
+Following this, the output can be seen in the terminal, and using the following link:
+http://127.0.0.1:5000/
+
+##  Requirements (can be found in SMC_project_environment.yml)
+- python
+- pip
 - numpy
-- sounddevice
+- scipy
+- scikit-learn
+- flask
+- flask-socketio
+- pytorch
+- torchvision
+- tqdm
+- matplotlib
+- seaborn
 - librosa
-- madmom (in case we need it later)
+- llvmlite
+- numba
+- audioread
+- cython
+- soxr
+- sounddevice
+- soundfile
+- nnAudio
