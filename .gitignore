@@ -1,4 +1,6 @@
 *.mp3
 *.npy
 *.txt
-Model_Part/data/*
+
+Model/data/*
+.idea/*
