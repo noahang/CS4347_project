@@ -32,7 +32,7 @@ audio_queue = queue.Queue(maxsize=100)
 STOP_SIGNAL = None 
 
 #Analysis Parameters:
-PROCESSING_INTERVAL_SECONDS = 2
+PROCESSING_INTERVAL_SECONDS = 6
 PROCESSING_INTERVAL_SAMPLES = int(SAMPLE_RATE * PROCESSING_INTERVAL_SECONDS)
 
 #frame length:
@@ -50,7 +50,7 @@ CQT_BINS_PER_OCTAVE = 12
 CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 
 #Sliding Window Parameters:
-PROCESSING_HOP_SECONDS = 0.5
+PROCESSING_HOP_SECONDS = 1
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
 #Interval between each output of mode-estimate
@@ -62,7 +62,7 @@ device = "cpu"
 
 classifier = Classifier(
     device=device,
-    model_path="./Model/src/results/best_model.pth"
+    model_path="./Model/src/results/best_model2.pth"
 )
 classifier.model.eval()
 

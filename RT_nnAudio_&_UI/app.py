@@ -24,7 +24,7 @@ from Model.src.config.mode_map import NUM_TO_MODE_MAP
 device = "cpu" 
 classifier = Classifier(
     device=device, 
-    model_path="./Model/src/results/best_model.pth"
+    model_path="./Model/src/results/best_model3.pth"
 )
 classifier.model.eval()
 
@@ -41,7 +41,7 @@ audio_queue = queue.Queue(maxsize=100)
 STOP_SIGNAL = None 
 
 #Analysis Parameters:
-PROCESSING_INTERVAL_SECONDS = 2
+PROCESSING_INTERVAL_SECONDS = 6
 PROCESSING_INTERVAL_SAMPLES = int(SAMPLE_RATE * PROCESSING_INTERVAL_SECONDS)
 
 #frame length:
@@ -59,12 +59,12 @@ CQT_BINS_PER_OCTAVE = 12
 CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 
 #Sliding Window Parameters:
-PROCESSING_HOP_SECONDS = 0.5
+PROCESSING_HOP_SECONDS = 1
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
 
-def classify_mode(feature_data: torch.tensor):
-    # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 345)
+def classify_mode_old(feature_data: torch.tensor):
+    # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
     #Our model expects a batch, but we are processing one chunk at a time.
     x = feature_data.unsqueeze(0).to(device)
 
@@ -75,6 +75,19 @@ def classify_mode(feature_data: torch.tensor):
         pred = torch.argmax(probs, dim=1).item()
 
     return NUM_TO_MODE_MAP[pred]
+
+def classify_mode(feature_data: torch.tensor):
+    # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
+    #Our model expects a batch, but we are processing one chunk at a time.
+    x = feature_data.unsqueeze(0).to(device)
+
+    #Calculate with no_grad for faster computation
+    with torch.no_grad():
+        out = classifier.model(x)
+        probs = torch.softmax(out, dim=1)
+        pred = torch.argmax(probs, dim=1).item()
+
+    return pred
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
