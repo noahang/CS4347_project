@@ -17,9 +17,9 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import secrets
 
-from Model.src.train import Classifier
-from Model.src.hparams import Hparams
-from Model.src.config.mode_map import NUM_TO_MODE_MAP
+from Model2.src.train import Classifier
+from Model2.src.hparams import Hparams
+from Model2.src.config.mode_map import NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP
 
 device = "cpu" 
 classifier = Classifier(
@@ -63,7 +63,7 @@ PROCESSING_HOP_SECONDS = 1
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
 
-def classify_mode_old(feature_data: torch.tensor):
+def classify_mode_1_head(feature_data: torch.tensor):
     # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
     #Our model expects a batch, but we are processing one chunk at a time.
     x = feature_data.unsqueeze(0).to(device)
@@ -74,20 +74,22 @@ def classify_mode_old(feature_data: torch.tensor):
         probs = torch.softmax(out, dim=1)
         pred = torch.argmax(probs, dim=1).item()
 
-    return NUM_TO_MODE_MAP[pred]
+    return 
 
-def classify_mode(feature_data: torch.tensor):
+def classify_mode_2_heads(feature_data: torch.tensor):
     # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 601)
     #Our model expects a batch, but we are processing one chunk at a time.
     x = feature_data.unsqueeze(0).to(device)
 
     #Calculate with no_grad for faster computation
     with torch.no_grad():
-        out = classifier.model(x)
-        probs = torch.softmax(out, dim=1)
-        pred = torch.argmax(probs, dim=1).item()
+        center, mode = classifier.model(x)
+        probs_center = torch.softmax(center, dim=1)
+        probs_mode = torch.softmax(mode, dim=1)
+        pred_center = torch.argmax(probs_center, dim=1).item()
+        pred_mode = torch.argmax(probs_mode, dim=1).item()
 
-    return pred
+    return NUM_TO_TONAL_CENTER_MAP[pred_center]+ " " + NUM_TO_MUSICAL_MODE_MAP[pred_mode]
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
@@ -154,7 +156,7 @@ def processing_thread_task():
 
                 #Classification
                 # Run the neural network classifier on the CQT magnitude features
-                estimated_mode = classify_mode(magnitude_features_tensor)
+                estimated_mode = classify_mode_2_heads(magnitude_features_tensor)
                 print(f"Mode-estimate: {estimated_mode}")
 
                 # Send the estimated mode to the frontend via WebSocket

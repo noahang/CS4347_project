@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from config.mode_map import MUSICAL_MODE_TO_NUM_MAP, TONAL_CENTER_TO_NUM_MAP, SCALE_TO_NUM_MAP
+from Model2.src.config.mode_map import MUSICAL_MODE_TO_NUM_MAP, TONAL_CENTER_TO_NUM_MAP, SCALE_TO_NUM_MAP
 
 
 class MyDataset(Dataset):

@@ -12,11 +12,11 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-from models import CnnLstm
-from hparams import Hparams
+from Model2.src.models import CnnLstm
+from Model2.src.hparams import Hparams
 
-from dataset import get_data_loader, move_data_to_device
-from config.mode_map import NUM_TO_SCALE_MAP, NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP
+from Model2.src.dataset import get_data_loader, move_data_to_device
+from Model2.src.config.mode_map import NUM_TO_SCALE_MAP, NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP
 
 
 # from utils import ls
@@ -40,15 +40,15 @@ def main():
 class Classifier:
     def __init__(self, device="cpu", model_path=None, model_type='6s'):
         self.device = device
+        if model_type == '2s':
+            self.model = CnnLstm(Hparams.args_2s).to(self.device)
+        else:
+            self.model = CnnLstm(Hparams.args_6s).to(self.device)
 
         if model_path is not None:
             self.model.load_state_dict(torch.load(model_path, map_location=self.device))
             print('Model loaded.')
         else:
-            if model_type == '2s':
-                self.model = CnnLstm(Hparams.args_2s).to(self.device)
-            else:
-                self.model = CnnLstm(Hparams.args_6s).to(self.device)
             print('Model initialized.')
 
     def fit(self, args):
