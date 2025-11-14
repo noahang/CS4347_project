@@ -7,6 +7,9 @@ import time
 import statistics
 import random
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import torch
 from nnAudio.Spectrogram import CQT
 
@@ -15,6 +18,15 @@ from flask_socketio import SocketIO
 import secrets
 
 from Model.src.train import Classifier
+from Model.src.hparams import Hparams
+from Model.src.config.mode_map import NUM_TO_MODE_MAP
+
+device = "cpu" 
+classifier = Classifier(
+    device=device, 
+    model_path="./Model/src/results/best_model.pth"
+)
+classifier.model.eval()
 
 
 app = Flask(__name__)
@@ -50,18 +62,19 @@ CQT_N_BINS = CQT_OCTAVES * CQT_BINS_PER_OCTAVE
 PROCESSING_HOP_SECONDS = 0.5
 PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 
-#Interval between each output of mode-estimate
-FINAL_OUTPUT_INTERVAL_SECONDS = 2.0
-RESULTS_PER_FINAL_OUTPUT = int(FINAL_OUTPUT_INTERVAL_SECONDS / PROCESSING_HOP_SECONDS)
 
+def classify_mode(feature_data: torch.tensor):
+    # 1. Add a batch dimension (B, C, H, W) -> (1, 1, 84, 345)
+    #Our model expects a batch, but we are processing one chunk at a time.
+    x = feature_data.unsqueeze(0).to(device)
 
-def classify_mode(feature_data: np.ndarray):
-    """
-    Placeholder function for neural network classification.
-    """
-    classifier = Classifier(model_path="./Model/src/results/best_model.pth")
-    mode = classifier.classify(feature_data)
-    return mode
+    #Calculate with no_grad for faster computation
+    with torch.no_grad():
+        out = classifier.model(x)
+        probs = torch.softmax(out, dim=1)
+        pred = torch.argmax(probs, dim=1).item()
+
+    return NUM_TO_MODE_MAP[pred]
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
@@ -80,16 +93,18 @@ def audio_callback(indata, frames, time, status):
 def processing_thread_task():
     """
     Thread runs analysis on overlapping sliding windows.
-    It then aggregates these results and finds the statistical mode every X seconds.
+    the size and hop-length of the overlapping windows are decided by 
+    PROCESSING_INTERVAL_SECONDS and PROCESSING_HOP_SECONDS
     """
     print("Processing thread started, waiting for audio...")
     
+    #Main audio-buffer used by the processing thread
     audio_buffer = np.array([], dtype=np.float32)
-    mode_results_list = []
 
     print("Initializing nnAudio CQT layer...")
     FMIN = librosa.note_to_hz('C1') 
     
+    #initalizing the 1D-convolutional layer to calculate CQTs.
     cqt_layer = CQT(
         sr=SAMPLE_RATE,
         hop_length=HOP_SAMPLES,
@@ -100,7 +115,8 @@ def processing_thread_task():
     
     while True:
         try:
-            data = audio_queue.get(timeout=0.1)
+            # Get next audio block from producer thread
+            data = audio_queue.get(timeout=0.5)
             
             if data is STOP_SIGNAL:
                 print("Processing thread received stop signal.")
@@ -110,57 +126,32 @@ def processing_thread_task():
 
             #Fast Processing Loop:
             while len(audio_buffer) >= PROCESSING_INTERVAL_SAMPLES:
-
+                 # Take the next "processing-interval"- seconds of samples:
                 audio_chunk = audio_buffer[:PROCESSING_INTERVAL_SAMPLES]
                 
-                """time_start = time.perf_counter()
-                # Previous librosa CQT computation:
-                cqt_features = librosa.cqt(
-                    y=audio_chunk,
-                    sr=SAMPLE_RATE,
-                    hop_length=HOP_SAMPLES,
-                    bins_per_octave= CQT_BINS_PER_OCTAVE,
-                    n_bins= CQT_N_BINS, 
-                )
-                time_end = time.perf_counter()
-                print(f"Librosa CQT computed in {time_end - time_start:.4f} seconds.")"""
 
                 # nnAudio CQT computation:
+                # Convert to tensor and add batch dimension: [1, num_samples]
+                # (nnAudio expects input shape [batch, time])
                 chunk_tensor = torch.tensor(audio_chunk, dtype=torch.float32).unsqueeze(0)
                 cqt_features_tensor = cqt_layer(chunk_tensor)
-                magnitude_features_tensor = torch.abs(cqt_features_tensor).squeeze(0).numpy()
+                # Convert from complex to magnitude features, and remove batch dimension
+                magnitude_features_tensor = torch.abs(cqt_features_tensor).squeeze(0)
+            
 
-
-
+                #Classification
+                # Run the neural network classifier on the CQT magnitude features
                 estimated_mode = classify_mode(magnitude_features_tensor)
-                print(f"   > Intermediate mode: {estimated_mode}")
+                print(f"Mode-estimate: {estimated_mode}")
+
+                # Send the estimated mode to the frontend via WebSocket
                 socketio.emit('update_mode', {'data': estimated_mode})
+
+                # Slide the buffer forward by the hop-size:
                 audio_buffer = audio_buffer[PROCESSING_HOP_SAMPLES:]
 
-
-            """    
-            #Old solution with aggregation over multiple estimates:  
-            mode_results_list.append(estimated_mode)
-            print(f"   > Intermediate mode: {estimated_mode}")  
-
-            #Aggregation loop:
-            if len(mode_results_list) >= RESULTS_PER_FINAL_OUTPUT:
-                
-                try:
-                    final_mode = statistics.mode(mode_results_list)
-                    print("\n" + "-"*30)
-                    print(f"   FINAL MODE (last {FINAL_OUTPUT_INTERVAL_SECONDS}s): {final_mode}")
-                    print("-"*30 + "\n")
-
-                    socketio.emit('update_mode', {'data': final_mode})
-                    
-                except statistics.StatisticsError:
-                    print(f"No unique mode found, defaulting to '{mode_results_list[0]}'")
-
-                mode_results_list.clear()
-            """
-
         except queue.Empty:
+            # No audio arrived within timeout. Loop continues without blocking
             continue
             
     print("Processing thread finished.")
@@ -170,26 +161,13 @@ def audio_processing_task():
     print("Main: Starting the processing thread...")
     processor = threading.Thread(target=processing_thread_task)
     processor.daemon = True
+    # Start the processing-thread that consumes audio and runs the neural network
     processor.start()
 
-   #Warm-up analysis functions:
-    print("Main: Warming up analysis functions...")
-    try:
-        dummy_audio = np.zeros(N_FFT * 4, dtype=np.float32) 
-        _ =  librosa.cqt(
-                y=dummy_audio,
-                sr=SAMPLE_RATE,
-                hop_length=HOP_SAMPLES,
-                bins_per_octave= CQT_BINS_PER_OCTAVE,
-                n_bins= CQT_N_BINS, 
-            )
-        print("Main: Warm-up complete.")
-    except Exception as e:
-        print(f"Error during warm-up: {e}")
-   
-
+    
     print("Main: Starting audio stream...")
     try:
+        # Open the microphone stream; audio_callback() is invoked for each block
         with sd.InputStream(callback=audio_callback,
                              channels=CHANNELS,
                              samplerate=SAMPLE_RATE, 
@@ -198,10 +176,11 @@ def audio_processing_task():
             
             print("\n" + "_"*40)
             print("   Audio is being streamed and processed.")
-            print("   Web server is running. Open http://127.0.0.1:5000")
+            print("   Web server running. Open http://127.0.0.1:5000")
             print("_"*40 + "\n")
             
             while True:
+                # Keeps the stream alive
                 time.sleep(10)
 
     except Exception as e:
@@ -225,5 +204,5 @@ if __name__ == "__main__":
     audio_thread.start()
     
     print("Main: Starting Flask-SocketIO server...")
-
+    # Launch the web server (SocketIO enables real-time push updates to the browser)
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

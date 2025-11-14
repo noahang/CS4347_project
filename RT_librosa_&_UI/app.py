@@ -11,6 +11,14 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 import secrets
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import torch
+from Model.src.train import Classifier
+from Model.src.hparams import Hparams
+from Model.src.config.mode_map import NUM_TO_MODE_MAP
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = secrets.token_hex(16)
@@ -49,14 +57,43 @@ PROCESSING_HOP_SAMPLES = int(SAMPLE_RATE * PROCESSING_HOP_SECONDS)
 FINAL_OUTPUT_INTERVAL_SECONDS = 2.0
 RESULTS_PER_FINAL_OUTPUT = int(FINAL_OUTPUT_INTERVAL_SECONDS / PROCESSING_HOP_SECONDS)
 
+#Classifier
+device = "cpu"
 
-def classify_mode(feature_data):
+classifier = Classifier(
+    device=device,
+    model_path="./Model/src/results/best_model.pth"
+)
+classifier.model.eval()
+
+
+
+def classify_mode_old(feature_data):
     """
     Placeholder function for neural network classification.
     """
     MODES = ["Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"]
     print("Classifier Received features for classification...")
     return random.choice(MODES)
+
+def classify_mode(feature_data: np.ndarray):
+    """
+    feature_data: numpy array of shape (84, T)
+    """
+
+    # Convert numpy → torch
+    x = torch.tensor(feature_data, dtype=torch.float32)
+
+    # Model expects (batch, F, T)
+    x = x.unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        out = classifier.model(x)           # shape (1, 84)
+        probs = torch.softmax(out, dim=1)
+        pred_class = torch.argmax(probs, dim=1).item()
+
+    return NUM_TO_MODE_MAP[pred_class]
+
 
 #Thread 1: Audio Callback (High-Priority):
 def audio_callback(indata, frames, time, status):
@@ -105,7 +142,7 @@ def processing_thread_task():
                     n_bins= CQT_N_BINS, 
                 )
                 
-                
+                print("CQT shape real-time:", np.abs(cqt_features).shape)
                 estimated_mode = classify_mode(np.abs(cqt_features))
                 mode_results_list.append(estimated_mode)
                 print(f"   > Intermediate mode: {estimated_mode}")

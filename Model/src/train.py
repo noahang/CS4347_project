@@ -12,11 +12,11 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-from models import CnnLstm
-from hparams import Hparams
+from Model.src.models import CnnLstm
+from Model.src.hparams import Hparams
 
-from dataset import get_data_loaders, move_data_to_device
-from config.mode_map import NUM_TO_MODE_MAP
+from Model.src.dataset import get_data_loaders, move_data_to_device
+from Model.src.config.mode_map import NUM_TO_MODE_MAP
 
 
 # from utils import ls

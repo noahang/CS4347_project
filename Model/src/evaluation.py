@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Import your existing modules
-from train import Classifier
-from dataset import MyDataset, move_data_to_device, collate_fn
-from hparams import Hparams
+from Model.src.train import Classifier
+from Model.src.dataset import MyDataset, move_data_to_device, collate_fn
+from Model.src.hparams import Hparams
 
 
 def evaluate_test_set(model_path, args, test_data_dir=Hparams.args_2s['data_dir'], device='cuda'):

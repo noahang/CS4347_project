@@ -6,7 +6,7 @@ from torch.autograd import Variable
 import random
 from sklearn.utils.class_weight import compute_class_weight
 
-from hparams import Hparams
+from Model.src.hparams import Hparams
 
 
 class CnnLstm(nn.Module):
