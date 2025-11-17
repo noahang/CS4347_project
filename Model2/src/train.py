@@ -8,8 +8,7 @@ import time
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from Model2.src.config.mode_map import NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP, get_scales_from_nums, \
-    get_scale_from_nums
+from Model2.src.config.mode_map import NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP, get_scales_from_nums
 from Model2.src.dataset import get_data_loader, move_data_to_device
 from Model2.src.hparams import Hparams
 from Model2.src.models import CnnLstm

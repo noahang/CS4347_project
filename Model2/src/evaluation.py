@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from Model2.src.train import Classifier, Metrics
-from Model2.src.dataset import MyDataset, move_data_to_device, collate_fn, get_data_loader
+from Model2.src.dataset import move_data_to_device, get_data_loader
 from Model2.src.hparams import Hparams
 
 
