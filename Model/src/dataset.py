@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from Model.src.config.mode_map import MODE_TO_NUM_MAP
+from Model.src.config.mode_map import SCALE_TO_NUM_MAP
 
 
 class MyDataset(Dataset):
@@ -25,7 +25,7 @@ class MyDataset(Dataset):
 
             for mode in modes:
                 folder_pth = os.path.join(self.ds_pth, mode)
-                idx = MODE_TO_NUM_MAP[mode]
+                idx = SCALE_TO_NUM_MAP[mode]
                 for f in os.listdir(folder_pth):
                     f_pth = os.path.join(folder_pth, f)
                     data = np.load(f_pth).astype(np.float32)

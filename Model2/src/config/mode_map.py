@@ -50,3 +50,13 @@ NUM_TO_MUSICAL_MODE_MAP = {
 MUSICAL_MODE_TO_NUM_MAP = {v: k for k, v in NUM_TO_MUSICAL_MODE_MAP.items()}
 
 
+def get_scale_from_nums(center, mode):
+    return f"{NUM_TO_TONAL_CENTER_MAP[center]} {NUM_TO_MUSICAL_MODE_MAP[mode]}"
+
+
+def get_scales_from_nums(center, mode):
+    res = []
+    for i in range(center.shape[0]):
+        c, m = center[i], mode[i]
+        res.append(get_scale_from_nums(c.item(), m.item()))
+    return res

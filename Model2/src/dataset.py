@@ -77,8 +77,8 @@ def collate_fn(batch):
         if x.shape[0] < max_frame_num:
             pad_amount = max_frame_num - x.shape[0]
             x = torch.nn.functional.pad(x, (0, 0, 0, 0, 0, pad_amount), mode='constant', value=0)
-        y_center = torch.nn.functional.pad(y_center, (0, max_frame_num - y_center.shape[0]), mode='constant', value=0)
-        y_mode = torch.nn.functional.pad(y_mode, (0, max_frame_num - y_mode.shape[0]), mode='constant', value=0)
+        y_center = torch.nn.functional.pad(y_center, (0, max_frame_num - y_center.shape[0]), mode='constant', value=y_center.item())
+        y_mode = torch.nn.functional.pad(y_mode, (0, max_frame_num - y_mode.shape[0]), mode='constant', value=y_mode.item())
         inp.append(x)
         tgt_center.append(y_center)
         tgt_mode.append(y_mode)
