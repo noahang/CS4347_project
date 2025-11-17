@@ -1,3 +1,10 @@
+# Real-Time Classification of Musical Mode
+Classify 84 tonic-mode classes with sounddevice, nnAudio, CQT, CNN + LSTM Model.
+
+Music Information Retrieval (MIR) for tonal analysis has historically focused on offline, major/minor key estimation. 
+This project is an attempt to address these limitations by designing and implementing a system for the real-time 
+classification of all seven diatonic modes, resulting in 84 distinct tonic-mode classes. (C major, D dorian, F# mixolydian, etc.).
+
 ## Setup
 To correctly run the real-time implementation of the code, 
 Navigate to the CS4347_project folder in the terminal, then to 
