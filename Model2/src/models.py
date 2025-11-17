@@ -60,14 +60,19 @@ class CnnLstm(nn.Module):
     def forward(self, x):
         x = x.unsqueeze(1)
         # print(x.shape)
-
+        # print(f"x.shape: {x.shape}")
         c1 = self.conv1(x)
+        # print(f"x.shape after cnn1: {c1.shape}")
         c2 = self.conv2(c1)
+        # print(f"x.shape after cnn2: {c2.shape}")
         c3 = self.conv3(c2)
+        # print(f"x.shape after cnn3: {c3.shape}")
         # print(0.1)
 
         c3 = c3.permute(0, 3, 1, 2)
+        # print(c3.shape)
         c3 = c3.flatten(2)
+        # print(c3.shape)
         # print(0.2)
 
         lstm1, _ = self.lstm(c3)
@@ -76,6 +81,7 @@ class CnnLstm(nn.Module):
         f1 = self.fc(lstm1[:, -1, :])
         out_tonal_center = self.tonal_center_head(f1)
         out_musical_mode = self.musical_mode_head(f1)
+        # print()
         # print(0.4)
 
         return (out_tonal_center, out_musical_mode)

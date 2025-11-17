@@ -48,8 +48,8 @@ class Hparams:
 
     # 115， 84， 601
     args_6s = {
-        'save_model_dir': './Model/src/results/6s',
-        'data_dir': './Model/data/6s-1s/splits',
+        'save_model_dir': './Model2/src/results/6s',
+        'data_dir': './Model2/data/6s-1s/splits',
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'batch_size': 1,
         'epoch': 10,

@@ -14,7 +14,7 @@ from dataset import MyDataset, move_data_to_device, collate_fn
 from hparams import Hparams
 
 
-def evaluate_test_set(model_path, args, test_data_dir=Hparams.args_2s['data_dir'], device='cuda'):
+def evaluate_test_set(model_path, args, test_data_dir=Hparams.args_6s['data_dir'], device='cuda'):
     """
     Evaluate the trained model on the test set
 
@@ -158,12 +158,10 @@ def main():
     # print(f"Model path: {args_cmd.model_path}")
     # print(f"Test data directory: {args_cmd.test_data_dir}")
 
-    os.chdir("../..")
-
     # Run evaluation
     results = evaluate_test_set(
-        model_path='./src/results/best_model.pth',
-        args=Hparams.args_2s,
+        model_path='.Model2/src/results/6s/best_model3.pth',
+        args=Hparams.args_6s,
         device='cpu'
     )
 

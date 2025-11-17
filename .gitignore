@@ -3,4 +3,8 @@
 *.txt
 
 Model/data/*
+Model2/data/*
+Model2/src/__pycache__/*
+Model2/src/config/__pycache__/*
 .idea/*
+
