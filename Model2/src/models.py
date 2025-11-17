@@ -1,10 +1,5 @@
-import numpy as np
-import os
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-import random
-from sklearn.utils.class_weight import compute_class_weight
 
 from Model2.src.hparams import Hparams
 
@@ -12,6 +7,8 @@ from Model2.src.hparams import Hparams
 class CnnLstm(nn.Module):
     def __init__(self, args: Hparams.args_6s):
         super(CnnLstm, self).__init__()
+        self.args = args
+        self.device = args['device']
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(args['in_chs'], args['conv1_chs'], kernel_size=args['conv1_ker'],
@@ -43,39 +40,36 @@ class CnnLstm(nn.Module):
         )
 
         self.lstm = nn.LSTM(
-            args['lstm_chs'], args['lstm_hidden'],
-            # dropout
-            batch_first=True # ?
+            input_size=args['lstm_chs'],
+            hidden_size=args['lstm_hidden'],
+            batch_first=True
         )
 
         self.fc = nn.Sequential(
             nn.Linear(args['lstm_hidden'], args['fc_chs']),
             nn.ReLU(),
-            # nn.Dropout(),
-            # nn.Linear(args['fc_chs'], args['out_chs']),
         )
         self.tonal_center_head = nn.Linear(args['fc_chs'], args['tonal_center_out_chs'])
         self.musical_mode_head = nn.Linear(args['fc_chs'], args['mode_out_chs'])
 
-    def forward(self, x, h0=None):
-        x = x.unsqueeze(1)
-        # print(x.shape)
-
+    def forward(self, x):
+        # B (num of 6s for 1 song), Cin (1), F (frequency=84), T (time=601)
+        # Cout (128)
+        x = x.unsqueeze(1)          # (B, Cin, F, T)
         c1 = self.conv1(x)
         c2 = self.conv2(c1)
-        c3 = self.conv3(c2)
-        # print(0.1)
+        c3 = self.conv3(c2)         # (B, Cout, F, T')
 
-        c3 = c3.permute(0, 3, 1, 2)
-        c3 = c3.flatten(2)
-        # print(0.2)
+        c3 = c3.flatten(1)          # (115, 72960)
+        c3 = c3.unsqueeze(1)
 
-        lstm1, hidden = self.lstm(c3, h0)
-        # print(0.3)
+        h0 = torch.zeros(1, c3.shape[0], self.args['lstm_hidden']).to(self.device)
+        c0 = torch.zeros(1, c3.shape[0], self.args['lstm_hidden']).to(self.device)
+        lstm1, _ = self.lstm(c3, (h0, c0))              # (115, 1, 256)
 
-        f1 = self.fc(lstm1[:, -1, :])
-        out_tonal_center = self.tonal_center_head(f1)
-        out_musical_mode = self.musical_mode_head(f1)
-        # print(0.4)
+        f1 = self.fc(lstm1[:, -1, :])                   # (115, 128)
 
-        return (out_tonal_center, out_musical_mode), hidden
+        out_tonal_center = self.tonal_center_head(f1)   # (115, 12)
+        out_musical_mode = self.musical_mode_head(f1)   # (115, 8)
+
+        return out_tonal_center, out_musical_mode

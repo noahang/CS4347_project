@@ -1,98 +1,56 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import os
-import argparse
-from torch.utils.data import DataLoader
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Import your existing modules
-from Model2.src.train import Classifier
-from Model2.src.dataset import MyDataset, move_data_to_device, collate_fn
+from Model2.src.train import Classifier, Metrics
+from Model2.src.dataset import MyDataset, move_data_to_device, collate_fn, get_data_loader
 from Model2.src.hparams import Hparams
 
 
-def evaluate_test_set(model_path, args, test_data_dir=Hparams.args_6s['data_dir'], device='cuda'):
-    """
-    Evaluate the trained model on the test set
-
-    Args:
-        model_path: Path to the saved model weights
-        test_data_dir: Directory containing test data
-        args: Hyperparameters dictionary
-        device: Device to run evaluation on
-    """
-
-    # Initialize model
+def evaluate_test_set(model_path, args):
+    device = args['device']
     classifier = Classifier(device=device, model_path=model_path)
     model = classifier.model
     model.eval()
 
-    # Create test dataset and dataloader
-    test_dataset = MyDataset(ds_root=test_data_dir, split='test')
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=args['batch_size'],
-        shuffle=False,
-        num_workers=args['num_workers'],
-        collate_fn=collate_fn
-    )
+    test_loader = get_data_loader(split='test', args=args)
 
-    print(f"Test set size: {len(test_dataset)}")
+    print(f"Test Dataset size: {len(test_loader)}")
     print("Starting evaluation...")
 
-    # Storage for predictions and targets
-    all_predictions = []
-    all_targets = []
-    all_probabilities = []
+    outs = []
+    tgts = []
+    metric = Metrics(nn.CrossEntropyLoss)
 
-    # Evaluation loop
     with torch.no_grad():
         for batch in test_loader:
-            x, tgt = move_data_to_device(batch, device)
-
-            # Forward pass
+            x, tgt_center, tgt_mode = move_data_to_device(batch, args['device'])
             out = model(x)
-            print(out)
-            print(out.shape)
-            # out = torch.mean(out, dim=-1)
-            # print(out.shape)
-            probs = torch.softmax(out, dim=1)
-            print(probs)
-            print(probs.shape)
-            preds = torch.argmax(probs, dim=1)
-            print(preds)
-            print(preds.shape)
+            metric.update(out, (tgt_center, tgt_mode))
 
-            # Store results
-            all_predictions.extend(preds.cpu().numpy())
-            all_targets.extend(tgt.cpu().numpy())
-            all_probabilities.extend(probs.cpu().numpy())
+            outs.extend(out.cpu().numpy().tolist())
+            tgts.extend((tgt_center.cpu().numpy()))
 
-    # Convert to numpy arrays
-    all_predictions = np.array(all_predictions)
-    all_targets = np.array(all_targets)
-    all_probabilities = np.array(all_probabilities)
+    outs = np.array(outs)
+    tgts = np.array(tgts)
 
-    # Calculate metrics
-    print(all_targets)
-    print(all_predictions)
-    accuracy = accuracy_score(all_targets, all_predictions)
+    accuracy = accuracy_score(tgts, outs)
 
     print("\n" + "=" * 50)
     print("TEST SET EVALUATION RESULTS")
     print("=" * 50)
     print(f"Overall Accuracy: {accuracy:.4f}")
-    print(f"Test set size: {len(all_targets)}")
+    print(f"Test set size: {len(tgts)}")
 
     # Detailed classification report
     print("\nDetailed Classification Report:")
-    print(classification_report(all_targets, all_predictions))
+    print(classification_report(tgts, outs))
 
     # Confusion matrix
-    cm = confusion_matrix(all_targets, all_predictions)
+    cm = confusion_matrix(tgts, outs)
     print("\nConfusion Matrix:")
     print(cm)
 
@@ -113,59 +71,29 @@ def evaluate_test_set(model_path, args, test_data_dir=Hparams.args_6s['data_dir'
     # Calculate per-class accuracy
     print("\nPer-class Accuracy:")
     class_accuracies = {}
-    unique_classes = np.unique(all_targets)
+    unique_classes = np.unique(tgts)
     for class_id in unique_classes:
-        class_mask = all_targets == class_id
+        class_mask = tgts == class_id
         if np.sum(class_mask) > 0:
-            class_accuracy = np.mean(all_predictions[class_mask] == class_id)
+            class_accuracy = np.mean(outs[class_mask] == class_id)
             class_accuracies[class_id] = class_accuracy
             print(f"Class {class_id}: {class_accuracy:.4f} ({np.sum(class_mask)} samples)")
 
     return {
         'accuracy': accuracy,
-        'predictions': all_predictions,
-        'targets': all_targets,
-        'probabilities': all_probabilities,
+        'predictions': outs,
+        'targets': tgts,
         'class_accuracies': class_accuracies,
         'confusion_matrix': cm
     }
 
 
 def main():
-    # parser = argparse.ArgumentParser(description='Evaluate model on test set')
-    # parser.add_argument('--model_path', type=str, required=True,
-    #                     help='Path to the trained model weights')
-    # parser.add_argument('--test_data_dir', type=str,
-    #                     default='./data/2s-0.5s/splits/test',
-    #                     help='Directory containing test data')
-    # parser.add_argument('--device', type=str, default='cuda',
-    #                     choices=['cuda', 'cpu'],
-    #                     help='Device to run evaluation on')
-    #
-    # args_cmd = parser.parse_args()
-    #
-    # # Set device
-    # device = args_cmd.device
-    # if device == 'cuda' and not torch.cuda.is_available():
-    #     print("CUDA not available, using CPU")
-    #     device = 'cpu'
-    #
-    # # Update data directory in hyperparameters
-    # eval_args = Hparams.args_2s.copy()
-    # eval_args['data_dir'] = os.path.dirname(args_cmd.test_data_dir)  # Parent directory of test
-    #
-    # print(f"Using device: {device}")
-    # print(f"Model path: {args_cmd.model_path}")
-    # print(f"Test data directory: {args_cmd.test_data_dir}")
-
-    # Run evaluation
     results = evaluate_test_set(
         model_path='.Model2/src/results/6s/best_model3.pth',
-        args=Hparams.args_6s,
-        device='cpu'
+        args=Hparams.args_6s
     )
 
-    # Save results
     output_file = 'test_evaluation_results.npy'
     np.save(output_file, results, allow_pickle=True)
     print(f"\nResults saved to {output_file}")

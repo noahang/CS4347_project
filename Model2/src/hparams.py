@@ -82,10 +82,10 @@ class Hparams:
         'dropout3_prob': 0.05,
 
         # 'lstm_chs': 128 * 84,
-        'lstm_chs': 2432,
+        'lstm_chs': 72960,
         'lstm_hidden': 256,
 
         'fc_chs': 128,
         'tonal_center_out_chs': 12,
-        'mode_out_chs': 8,
+        'mode_out_chs': 7,
     }
