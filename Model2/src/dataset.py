@@ -58,7 +58,6 @@ def get_data_loader(split, args):
     return data_loader
 
 
-
 def move_data_to_device(data, device):
     ret = []
     for i in data:

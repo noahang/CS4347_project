@@ -8,10 +8,14 @@ import time
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from Model2.src.config.mode_map import NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP, get_scales_from_nums, get_scale_from_nums
+from Model2.src.config.mode_map import NUM_TO_TONAL_CENTER_MAP, NUM_TO_MUSICAL_MODE_MAP, get_scales_from_nums
 from Model2.src.dataset import get_data_loader, move_data_to_device
 from Model2.src.hparams import Hparams
 from Model2.src.models import CnnLstm
+
+import warnings
+
+warnings.filterwarnings('ignore')
 
 
 def main():
@@ -26,8 +30,10 @@ class Classifier:
         self.device = device
         if model_type == '2s':
             self.model = CnnLstm(Hparams.args_2s).to(self.device)
-        else:
+        elif model_type == '6s':
             self.model = CnnLstm(Hparams.args_6s).to(self.device)
+        else:
+            raise ValueError("Model type must be '2s' or '6s'")
 
         if model_path is not None:
             self.model.load_state_dict(torch.load(model_path, map_location=self.device))
@@ -64,21 +70,18 @@ class Classifier:
             for i, batch in enumerate(pbar):
                 x, tgt_center, tgt_mode = move_data_to_device(batch, self.device)
                 print(f"Song {i}, tgt={get_scales_from_nums(tgt_center, tgt_mode)[0]}")
-                # print(f"x.shape: {x.shape}, center.shape: {tgt_center.shape}, mode.shape: {tgt_mode.shape}")
                 out = self.model(x)
                 loss_center = loss_func(out[0], tgt_center)
                 loss_mode = loss_func(out[1], tgt_mode)
                 losses = (loss_center + loss_mode, loss_center, loss_mode)
                 loss = losses[0]
                 metric.update(out, (tgt_center, tgt_mode), losses)
-                print(f"        out={get_scale_from_nums(metric.get_pred(out))}")
-                # print(2)
+                print(f"        out={metric.get_pred(out)}")
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 total_training_loss += loss.item()
-                # print(3)
 
                 pbar.set_description('Epoch {}, Loss: {:.4f}'.format(epoch, loss.item()))
             metric_train = metric.get_value()
@@ -116,7 +119,7 @@ class Classifier:
                 metric_valid['mode_loss']
             ))
 
-            # metric.plot_metrics(save_path=save_model_dir + f"/imgs/metrics_plot{epoch}.png")
+            metric.plot_metrics(save_path=save_model_dir + f"/imgs/metrics_plot{epoch}.png")
 
             # Save the best model
             if metric_valid['loss'] < min_valid_loss:
@@ -204,11 +207,11 @@ class Metrics:
         return torch.mean((tgt == out).float())
 
     def get_value(self):
-            for k in self.buffer:
-                self.buffer[k] = sum(self.buffer[k]) / len(self.buffer[k])
-            ret = self.buffer
-            self.buffer = {}
-            return ret
+        for k in self.buffer:
+            self.buffer[k] = sum(self.buffer[k]) / len(self.buffer[k])
+        ret = self.buffer
+        self.buffer = {}
+        return ret
 
     def plot_metrics(self, save_path="training_curves.png"):
         train_losses = np.array(self.train_losses)
@@ -281,7 +284,7 @@ class Metrics:
             pred_center = torch.argmax(out_center, dim=-1)
             pred_mode = torch.argmax(out_mode, dim=-1)
 
-            return get_scale_from_nums(pred_center, pred_mode)
+            return get_scales_from_nums(pred_center, pred_mode)
 
 
 if __name__ == '__main__':
